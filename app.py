@@ -7,52 +7,55 @@ st.set_page_config(page_title="LogicForge: Signature Methodology", layout="wide"
 st.title("🚀 LogicForge: Strategic Value Framework")
 st.markdown("---")
 
-# --- SIDEBAR: FILTERS & CONTROLS ---
-st.sidebar.header("Data Controls")
+# --- DATA LOADING & CALCULATIONS ---
 uploaded_file = st.sidebar.file_uploader("Upload Project Template", type=["csv", "xlsx"])
 
-# --- DATA PROCESSING ---
+def calculate_metrics(df):
+    # Convert dates to datetime objects
+    date_cols = ["Start Date", "Projected End Date", "Actual End Date"]
+    for col in date_cols:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col])
+    
+    # Calculate Slippage (Days)
+    if "Projected End Date" in df.columns and "Actual End Date" in df.columns:
+        df['Slippage (Days)'] = (df['Actual End Date'] - df['Projected End Date']).dt.days
+    return df
+
 if uploaded_file:
-    # Handle CSV or Excel
-    if uploaded_file.name.endswith('.csv'):
-        df = pd.read_csv(uploaded_file)
-    else:
-        df = pd.read_excel(uploaded_file)
+    df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+    df = calculate_metrics(df)
     
-    st.success(f"Successfully loaded {len(df)} projects.")
-
-    # Sidebar Filters
-    if "Status" in df.columns:
-        status_list = df["Status"].unique().tolist()
-        selected_status = st.sidebar.multiselect("Filter by Status", status_list, default=status_list)
-        df = df[df["Status"].isin(selected_status)]
-
-    # --- ANALYTICS DASHBOARD ---
-    st.header("📊 Project Portfolio Analytics")
-    col1, col2, col3 = st.columns(3)
+    # --- KPI TILES ---
+    st.header("📊 Executive Summary")
+    c1, c2, c3, c4 = st.columns(4)
     
-    with col1:
+    with c1:
         st.metric("Total Projects", len(df))
-    with col2:
-        if "Actual End Date" in df.columns:
-            completed = df["Actual End Date"].notnull().sum()
-            st.metric("Completed Sign-offs", completed)
-    with col3:
-        st.metric("Active Pipeline", len(df) - (completed if "Actual End Date" in df.columns else 0))
+    with c2:
+        avg_slippage = df['Slippage (Days)'].mean() if 'Slippage (Days)' in df.columns else 0
+        st.metric("Avg Slippage", f"{avg_slippage:.1f} Days", delta_color="inverse")
+    with c3:
+        if "Baseline" in df.columns and "Target" in df.columns:
+            total_saved = (df['Baseline'] - df['Target']).sum()
+            st.metric("Total Efficiency Gain", f"{total_saved:,} units")
+    with c4:
+        st.metric("Status", "Cloud Live")
 
-    st.subheader("Project Inventory")
-    st.dataframe(df, use_container_width=True)
+    # --- FILTERS & DATA ---
+    st.markdown("---")
+    st.subheader("Project Inventory & Schedule Variance")
+    
+    # Simple color formatting for slippage
+    def color_slippage(val):
+        if val > 0: return 'color: red'
+        if val < 0: return 'color: green'
+        return ''
+
+    st.dataframe(df.style.applymap(color_slippage, subset=['Slippage (Days)'] if 'Slippage (Days)' in df.columns else []), use_container_width=True)
 
 else:
-    st.info("💡 Please upload your Project Template via the sidebar to begin analytics.")
-    # Example template for the user to see what's needed
-    st.write("Your template should include: `Project Name`, `Status`, `Start Date`, `Projected End Date`, `Actual End Date`, `Baseline`, `Target`.")
+    st.info("Awaiting CSV/Excel upload to generate Signature Analytics.")
 
-# --- GOVERNANCE: SIGN-OFF CAPABILITY ---
-st.markdown("---")
-st.header("📂 Governance & Scope Sign-off")
-with st.expander("Attach New Scope Sign-off"):
-    proj_name = st.text_input("Project Name for Sign-off")
-    scope_doc = st.file_uploader("Upload Signed Scope (PDF)", type=["pdf"])
-    if st.button("Link Sign-off to Project"):
-        st.success(f"Scope for {proj_name} has been archived.")
+st.sidebar.markdown("---")
+st.sidebar.caption("v2.1 | Signature Methodology")
