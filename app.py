@@ -1,74 +1,57 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 
-# Set Page Config for a professional look
-st.set_page_config(page_title="LogicForge | Strategic Value Mapper", layout="wide")
+st.set_page_config(page_title="LogicForge: Signature Methodology", layout="wide")
 
-# Custom Styling
-st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
-    </style>
-    """, unsafe_allow_html=True)
+st.title("🚀 LogicForge: Strategic Value Framework")
+st.markdown("---")
 
-st.title("🚀 LogicForge")
-st.subheader("Signature Methodology: From Current State to Quantified Value")
-st.info("This tool enforces a Strategic Logic Gate to ensure requirements are tied to measurable outcomes.")
+# --- SIDEBAR FILTERS ---
+st.sidebar.header("Project Filters")
+status_filter = st.sidebar.multiselect("Select Status", ["Pipeline", "Active", "Completed", "Signed Off"], default="Active")
 
-# --- PHASE 1: CURRENT STATE ---
-st.header("1. Current State (The Pain)")
-col1, col2 = st.columns([2, 1])
+# --- MASS UPLOAD SECTION ---
+st.header("1. Project Mass Upload")
+uploaded_file = st.sidebar.file_uploader("Upload Project Template (CSV/Excel)", type=["csv", "xlsx"])
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+    st.success("File Uploaded Successfully!")
+    
+    # Filter the dataframe based on sidebar
+    if "Status" in df.columns:
+        df = df[df["Status"].isin(status_filter)]
+    
+    st.dataframe(df, use_container_width=True)
+else:
+    st.info("Awaiting template upload. Showing manual entry mode.")
+
+# --- MANUAL ROI CALCULATOR (YOUR ORIGINAL LOGIC) ---
+st.header("2. Value Validation (Signature ROI)")
+col1, col2 = st.columns(2)
 
 with col1:
-    current_state_desc = st.text_area("Describe the current pain point or inefficiency:", 
-                                   placeholder="e.g., Manual reconciliation of invoices takes 40 hours per week.")
+    baseline = st.number_input("Baseline (Current Hours/Cost)", min_value=0.0, value=100.0)
+    target = st.number_input("Target (Projected Hours/Cost)", min_value=0.0, value=50.0)
+    
 with col2:
-    baseline_metric = st.number_input("Baseline Metric (Value)", min_value=0.0, help="The current measurable state (e.g., 40.0)")
-    unit = st.text_input("Unit of Measure", value="Hours/Week")
+    start_date = st.date_input("Project Start Date", datetime.now())
+    end_date = st.date_input("Projected End Date", datetime.now())
 
-# --- PHASE 2: THE GAP ---
-st.header("2. Gap Analysis")
-gap_types = st.multiselect("Identify the primary obstacles:", 
-                         ["Process Redundancy", "Technical Debt", "Data Silos", "Manual Intervention", "Skill Gap"])
+if st.button("Calculate ROI"):
+    improvement = ((baseline - target) / baseline) * 100
+    st.metric("Efficiency Gain", f"{improvement}%", delta=f"{baseline - target} units saved")
+    
+    # Simple chart for visualization
+    chart_data = pd.DataFrame({"Stage": ["Baseline", "Target"], "Values": [baseline, target]})
+    st.bar_chart(chart_data, x="Stage", y="Values")
 
-# --- PHASE 3: THE TARGET (THE GAIN) ---
-st.header("3. Future State (The Value)")
-col3, col4 = st.columns([1, 2])
+# --- SIGN-OFF SECTION ---
+st.header("3. Governance & Sign-off")
+scope_file = st.file_uploader("Attach Sign-off Scope (PDF/Docx)", type=["pdf", "docx"])
+if scope_file:
+    st.success(f"Sign-off attached: {scope_file.name}")
 
-with col3:
-    target_metric = st.number_input("Target Metric (Expected Value)", min_value=0.0)
-with col4:
-    success_criteria = st.text_input("Definition of Success", placeholder="e.g., Reduce manual effort by 50%")
-
-# --- ANALYTICAL ENGINE ---
-st.divider()
-if st.button("Validate Strategic Alignment"):
-    if not current_state_desc or baseline_metric == 0:
-        st.error("❌ Error: You must define a Current State and a Baseline Metric to proceed.")
-    elif target_metric >= baseline_metric:
-        st.warning("⚠️ Scope Risk: The target metric shows no improvement over the baseline. Value delivery is unverified.")
-    else:
-        # Calculate Improvement
-        improvement = baseline_metric - target_metric
-        roi_percent = (improvement / baseline_metric) * 100
-        
-        st.success(f"✅ Strategic Alignment Verified: This project targets a {roi_percent:.1f}% improvement.")
-        
-        # Dashboard Visuals
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Baseline", f"{baseline_metric} {unit}")
-        m2.metric("Target", f"{target_metric} {unit}")
-        m3.metric("Improvement", f"{roi_percent:.1f}%", delta=f"-{improvement} {unit}", delta_color="normal")
-
-        # Visualization
-        chart_data = pd.DataFrame({
-            "State": ["Current", "Future"],
-            "Value": [baseline_metric, target_metric]
-        })
-        st.bar_chart(data=chart_data, x="State", y="Value")
-        
-        # Export logic (Simulated for Portfolio)
-        st.download_button("Generate Sign-off Summary (Markdown)", 
-                         data=f"# LogicForge Sign-off\n\n**Pain:** {current_state_desc}\n**Improvement:** {roi_percent:.1f}%",
-                         file_name="project_scope_summary.md")
+st.markdown("---")
+st.caption("Last Updated: 2026-02-21 | Signature Methodology v2.0")
