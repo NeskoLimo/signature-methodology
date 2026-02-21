@@ -10,7 +10,7 @@ st.markdown("""
     .main { background-color: #f5f7f9; }
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
     </style>
-    """, unsafe_allow_name=True)
+    """, unsafe_allow_html=True)
 
 st.title("🚀 LogicForge")
 st.subheader("Signature Methodology: From Current State to Quantified Value")
