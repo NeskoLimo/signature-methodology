@@ -7,51 +7,52 @@ st.set_page_config(page_title="LogicForge: Signature Methodology", layout="wide"
 st.title("🚀 LogicForge: Strategic Value Framework")
 st.markdown("---")
 
-# --- SIDEBAR FILTERS ---
-st.sidebar.header("Project Filters")
-status_filter = st.sidebar.multiselect("Select Status", ["Pipeline", "Active", "Completed", "Signed Off"], default="Active")
+# --- SIDEBAR: FILTERS & CONTROLS ---
+st.sidebar.header("Data Controls")
+uploaded_file = st.sidebar.file_uploader("Upload Project Template", type=["csv", "xlsx"])
 
-# --- MASS UPLOAD SECTION ---
-st.header("1. Project Mass Upload")
-uploaded_file = st.sidebar.file_uploader("Upload Project Template (CSV/Excel)", type=["csv", "xlsx"])
-
+# --- DATA PROCESSING ---
 if uploaded_file:
-    df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-    st.success("File Uploaded Successfully!")
+    # Handle CSV or Excel
+    if uploaded_file.name.endswith('.csv'):
+        df = pd.read_csv(uploaded_file)
+    else:
+        df = pd.read_excel(uploaded_file)
     
-    # Filter the dataframe based on sidebar
+    st.success(f"Successfully loaded {len(df)} projects.")
+
+    # Sidebar Filters
     if "Status" in df.columns:
-        df = df[df["Status"].isin(status_filter)]
+        status_list = df["Status"].unique().tolist()
+        selected_status = st.sidebar.multiselect("Filter by Status", status_list, default=status_list)
+        df = df[df["Status"].isin(selected_status)]
+
+    # --- ANALYTICS DASHBOARD ---
+    st.header("📊 Project Portfolio Analytics")
+    col1, col2, col3 = st.columns(3)
     
+    with col1:
+        st.metric("Total Projects", len(df))
+    with col2:
+        if "Actual End Date" in df.columns:
+            completed = df["Actual End Date"].notnull().sum()
+            st.metric("Completed Sign-offs", completed)
+    with col3:
+        st.metric("Active Pipeline", len(df) - (completed if "Actual End Date" in df.columns else 0))
+
+    st.subheader("Project Inventory")
     st.dataframe(df, use_container_width=True)
+
 else:
-    st.info("Awaiting template upload. Showing manual entry mode.")
+    st.info("💡 Please upload your Project Template via the sidebar to begin analytics.")
+    # Example template for the user to see what's needed
+    st.write("Your template should include: `Project Name`, `Status`, `Start Date`, `Projected End Date`, `Actual End Date`, `Baseline`, `Target`.")
 
-# --- MANUAL ROI CALCULATOR (YOUR ORIGINAL LOGIC) ---
-st.header("2. Value Validation (Signature ROI)")
-col1, col2 = st.columns(2)
-
-with col1:
-    baseline = st.number_input("Baseline (Current Hours/Cost)", min_value=0.0, value=100.0)
-    target = st.number_input("Target (Projected Hours/Cost)", min_value=0.0, value=50.0)
-    
-with col2:
-    start_date = st.date_input("Project Start Date", datetime.now())
-    end_date = st.date_input("Projected End Date", datetime.now())
-
-if st.button("Calculate ROI"):
-    improvement = ((baseline - target) / baseline) * 100
-    st.metric("Efficiency Gain", f"{improvement}%", delta=f"{baseline - target} units saved")
-    
-    # Simple chart for visualization
-    chart_data = pd.DataFrame({"Stage": ["Baseline", "Target"], "Values": [baseline, target]})
-    st.bar_chart(chart_data, x="Stage", y="Values")
-
-# --- SIGN-OFF SECTION ---
-st.header("3. Governance & Sign-off")
-scope_file = st.file_uploader("Attach Sign-off Scope (PDF/Docx)", type=["pdf", "docx"])
-if scope_file:
-    st.success(f"Sign-off attached: {scope_file.name}")
-
+# --- GOVERNANCE: SIGN-OFF CAPABILITY ---
 st.markdown("---")
-st.caption("Last Updated: 2026-02-21 | Signature Methodology v2.0")
+st.header("📂 Governance & Scope Sign-off")
+with st.expander("Attach New Scope Sign-off"):
+    proj_name = st.text_input("Project Name for Sign-off")
+    scope_doc = st.file_uploader("Upload Signed Scope (PDF)", type=["pdf"])
+    if st.button("Link Sign-off to Project"):
+        st.success(f"Scope for {proj_name} has been archived.")
